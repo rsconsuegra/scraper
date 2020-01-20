@@ -1,2 +1,2 @@
 # scraper
-Webscraper for ECC 
+Webscraper for ECC and SD
