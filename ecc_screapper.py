@@ -22,9 +22,8 @@ from datetime import datetime,date,timedelta
 CONV = 4100
 SHIFT = 12000
 
-def content_scrapper(url,rule,element,element_attribute):
-	page = requests.get(url,verify = False)
-	soup = BeautifulSoup(page.text, 'html.parser')
+def content_scrapper(soup,rule,element,element_attribute):
+	
 	
 	regex = re.compile(rule)
 	content_element = soup.find_all(
@@ -55,9 +54,13 @@ if __name__ == "__main__":
 	comic = {}
 	comic['Editorial'] = "ECC"
 	
-	for product in ECC:	
+	for product in ECC:
+		
+		page = requests.get(product,verify = False)
+		soup = BeautifulSoup(page.text, 'html.parser')
+		
 		info = content_scrapper(
-				url=product,
+				soup=soup,
 				rule='infoprod',
 				element='div',
 				element_attribute = 'class')
@@ -67,10 +70,18 @@ if __name__ == "__main__":
 				.replace("\r","")
 				.split(" || ")
 				)
-		
+		if (not "GUIÓN" in info[0].text):
+			attributes.insert(2,f'GUIÓN: NA')
+
+		if (not "DIBUJO" in info[0].text):
+			attributes.insert(3,f'DIBUJO: {attributes[2][7:]}')
+			
 		attributes[-1] = attributes[-1].rstrip()
 		
-		edi = re.split(r'[:,]|\.\s',attributes[4])[1:]
+		if(len(attributes)>4):
+			edi = re.split(r'[:,]|\.\s',attributes[4])[1:]
+		else:
+			edi = ["NA","NA"]
 		
 		if len(edi) > 3:
 			publication_date = datetime.strptime(
@@ -81,7 +92,7 @@ if __name__ == "__main__":
 		
 		
 		estado = content_scrapper(
-				url = product,
+				soup = soup,
 				rule = "ctl00_ContentPlaceHolder1_LitMensaje",
 				element="span",
 				element_attribute="id")[0].text
@@ -95,7 +106,7 @@ if __name__ == "__main__":
 				comic['Estado'] = "Proximamente"
 	
 		comic['Titulo'] = content_scrapper(
-				url = product,
+				soup = soup,
 				rule = "titprod",
 				element="span",
 				element_attribute="class")[0].text
@@ -104,7 +115,7 @@ if __name__ == "__main__":
 				+ ", " + attributes[3].split(": ")[1])
 		
 		comic['Precio(EUR)'] = (content_scrapper(
-					url=product,
+					soup =soup,
 					rule='precio',
 					element='div',
 					element_attribute = 'class')[0]
@@ -122,6 +133,6 @@ if __name__ == "__main__":
 		comics = comics.append(comic, ignore_index=True)
 
 		print(f"{comic['Titulo']} Loaded")
-		
+	
 	with open('Comics_DataFrame.json', 'w', encoding='utf-8') as file:
 			comics.to_json(file, orient='index', force_ascii=False)
